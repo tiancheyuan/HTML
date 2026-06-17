@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>工时与加班记录</title>
+    <style>
+        /* ===== 全局重置 & 主题 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a3c6e;
+            --primary-light: #2a5a9a;
+            --primary-dark: #0f2a4a;
+            --accent: #c9a84c;
+            --accent-light: #e8d28a;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #1e2a3a;
+            --text-secondary: #5a6a7a;
+            --border: #dce1e8;
+            --shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --transition: 0.25s ease;
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 16px 12px 80px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .app {
+            max-width: 480px;
+            width: 100%;
+        }
+
+        /* ===== 头部 ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 4px 16px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: var(--primary);
+        }
+
+        .header h1 small {
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-left: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .header-actions button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 18px;
+            padding: 6px 8px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+
+        .header-actions button:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        /* ===== 卡片 ===== */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px 16px 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            transition: box-shadow var(--transition);
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .card-title .badge {
+            font-size: 11px;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 20px;
+            padding: 0 10px;
+            line-height: 20px;
+            font-weight: 400;
+        }
+
+        /* ===== 打卡区域 ===== */
+        .clock-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .clock-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 8px;
+            border-radius: var(--radius-sm);
+            border: 2px solid var(--border);
+            background: var(--bg);
+            cursor: pointer;
+            transition: all var(--transition);
+            font-family: var(--font);
+            text-align: center;
+            min-height: 80px;
+        }
+
+        .clock-btn .icon {
+            font-size: 26px;
+            margin-bottom: 4px;
+        }
+
+        .clock-btn .label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .clock-btn .time {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+            margin-top: 2px;
+        }
+
+        .clock-btn.primary {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .clock-btn.primary .label,
+        .clock-btn.primary .time {
+            color: #fff;
+        }
+
+        .clock-btn.primary:hover {
+            background: var(--primary-light);
+            border-color: var(--primary-light);
+        }
+
+        .clock-btn.accent {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .clock-btn.accent .label,
+        .clock-btn.accent .time {
+            color: #fff;
+        }
+
+        .clock-btn.accent:hover {
+            background: #b8953a;
+            border-color: #b8953a;
+        }
+
+        .clock-btn.inactive {
+            opacity: 0.6;
+        }
+
+        .clock-btn.inactive:hover {
+            opacity: 0.8;
+        }
+
+        .clock-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+
+        /* ===== 今日统计 ===== */
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 6px 0;
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+        }
+
+        .stat-item .number {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .stat-item .number.orange {
+            color: #c97d2b;
+        }
+
+        .stat-item .number.green {
+            color: #2a7a4a;
+        }
+
+        .stat-item .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* ===== 记录列表 ===== */
+        .record-list {
+            max-height: 280px;
+            overflow-y: auto;
+            margin-top: 4px;
+        }
+
+        .record-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .record-list::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .record-item:last-child {
+            border-bottom: none;
+        }
+
+        .record-item .left {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .record-item .left .date {
+            font-weight: 500;
+        }
+
+        .record-item .left .desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .record-item .right {
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .record-item .right .duration {
+            font-size: 16px;
+        }
+
+        .record-item .right .type {
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--text-secondary);
+            display: block;
+        }
+
+        .record-item .tag {
+            font-size: 10px;
+            font-weight: 500;
+            padding: 2px 10px;
+            border-radius: 20px;
+            background: var(--bg);
+            color: var(--text-secondary);
+            display: inline-block;
+        }
+
+        .record-item .tag.work {
+            background: #dbeafe;
+            color: #1a4a7a;
+        }
+
+        .record-item .tag.overtime {
+            background: #fef3d7;
+            color: #a76a1a;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px 0 20px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .empty-state .icon {
+            font-size: 36px;
+            display: block;
+            margin-bottom: 8px;
+            opacity: 0.5;
+        }
+
+        /* ===== 筛选 & 操作栏 ===== */
+        .filter-bar {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+            border-top: 1px solid var(--border);
+            padding-top: 12px;
+        }
+
+        .filter-bar button {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition);
+            font-family: var(--font);
+        }
+
+        .filter-bar button.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .filter-bar button:hover:not(.active) {
+            background: #e5e9ef;
+        }
+
+        .filter-bar .spacer {
+            flex: 1;
+        }
+
+        .filter-bar .action-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            transition: background var(--transition);
+        }
+
+        .filter-bar .action-btn:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-bar .action-btn.danger {
+            color: #b34a4a;
+        }
+
+        .filter-bar .action-btn.danger:hover {
+            background: #fde8e8;
+        }
+
+        /* ===== Toast ===== */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 90%;
+            max-width: 400px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: var(--primary-dark);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            animation: slideDown 0.3s ease;
+            width: 100%;
+            text-align: center;
+            pointer-events: auto;
+        }
+
+        .toast.success {
+            background: #1a6e3a;
+        }
+
+        .toast.error {
+            background: #b34a4a;
+        }
+
+        .toast.info {
+            background: var(--primary);
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== 响应式微调 ===== */
+        @media (max-width: 400px) {
+            .clock-btn .time {
+                font-size: 17px;
+            }
+            .stats-row {
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 4px;
+            }
+            .stat-item .number {
+                font-size: 18px;
+            }
+            .header h1 {
+                font-size: 18px;
+            }
+            .header h1 small {
+                font-size: 11px;
+            }
+        }
+
+        /* ===== 打印友好 ===== */
+        @media print {
+            body {
+                background: #fff;
+                padding: 10px;
+            }
+            .card {
+                box-shadow: none;
+                border: 1px solid #ccc;
+                break-inside: avoid;
+            }
+            .clock-btn {
+                border: 1px solid #aaa;
+            }
+            .filter-bar .action-btn {
+                display: none;
+            }
+        }
+
+        /* ===== 滚动条美化 ===== */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app" id="app">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>📋 工时簿 <small>体制内·加班记录</small></h1>
+            <div class="header-actions">
+                <button id="exportBtn" title="导出数据 (JSON)">📤</button>
+                <button id="clearBtn" title="清空所有数据 (慎用)">🗑️</button>
+            </div>
+        </div>
+
+        <!-- 打卡卡片 -->
+        <div class="card">
+            <div class="card-title">
+                ⏱️ 打卡
+                <span class="badge" id="todayBadge">今日</span>
+            </div>
+            <div class="clock-grid">
+                <button class="clock-btn" id="clockInBtn">
+                    <span class="icon">🟢</span>
+                    <span class="label">上班</span>
+                    <span class="time" id="clockInTime">--:--</span>
+                </button>
+                <button class="clock-btn" id="clockOutBtn" disabled>
+                    <span class="icon">🔴</span>
+                    <span class="label">下班</span>
+                    <span class="time" id="clockOutTime">--:--</span>
+                </button>
+                <button class="clock-btn accent" id="otStartBtn">
+                    <span class="icon">🌙</span>
+                    <span class="label">加班开始</span>
+                    <span class="time" id="otStartTime">--:--</span>
+                </button>
+                <button class="clock-btn accent" id="otEndBtn" disabled>
+                    <span class="icon">☀️</span>
+                    <span class="label">加班结束</span>
+                    <span class="time" id="otEndTime">--:--</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 今日统计 -->
+        <div class="card">
+            <div class="card-title">📊 今日汇总</div>
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="number" id="todayWorkHours">0.0</div>
+                    <div class="stat-label">工作时长 (h)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number orange" id="todayOtHours">0.0</div>
+                    <div class="stat-label">加班时长 (h)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number green" id="todayTotalHours">0.0</div>
+                    <div class="stat-label">总在岗 (h)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 记录列表 -->
+        <div class="card">
+            <div class="card-title">
+                📜 记录
+                <span class="badge" id="recordCount">0</span>
+            </div>
+            <div class="filter-bar">
+                <button class="active" data-filter="all">全部</button>
+                <button data-filter="work">上班</button>
+                <button data-filter="overtime">加班</button>
+                <span class="spacer"></span>
+                <button class="action-btn" id="exportCsvBtn">📥 CSV</button>
+            </div>
+            <div class="record-list" id="recordList">
+                <div class="empty-state">
+                    <span class="icon">📭</span>
+                    暂无记录，开始打卡吧
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ================================================================
+        //  数据层
+        // ================================================================
+
+        const STORAGE_KEY = 'worklog_data';
+
+        /** 数据结构：
+         *  {
+         *    records: [
+         *      {
+         *        id: string,
+         *        type: 'work' | 'overtime',
+         *        start: ISOstring,   // 开始时间
+         *        end: ISOstring | null, // 结束时间 (未结束为null)
+         *        date: 'YYYY-MM-DD',
+         *        duration: number | null // 已结算的分钟数 (未结束为null)
+         *      }
+         *    ]
+         *  }
+         */
+
+        let data = loadData();
+
+        function loadData() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.records)) {
+                        return parsed;
+                    }
+                }
+            } catch (_) { /* ignore */ }
+            return { records: [] };
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+        }
+
+        function todayStr() {
+            return new Date().toISOString().slice(0, 10);
+        }
+
+        function formatTime(date) {
+            return date.toTimeString().slice(0, 5);
+        }
+
+        function formatDate(date) {
+            return date.toISOString().slice(0, 10);
+        }
+
+        function parseISODate(str) {
+            return new Date(str);
+        }
+
+        function minutesToHours(min) {
+            return Math.round((min / 60) * 10) / 10;
+        }
+
+        function formatDuration(minutes) {
+            if (minutes == null) return '--';
+            const h = Math.floor(minutes / 60);
+            const m = minutes % 60;
+            if (h === 0) return `${m}min`;
+            if (m === 0) return `${h}h`;
+            return `${h}h ${m}min`;
+        }
+
+        // ================================================================
+        //  核心业务
+        // ================================================================
+
+        function findOpenRecord(type) {
+            return data.records.find(r => r.type === type && r.end === null);
+        }
+
+        function getTodayRecords() {
+            const day = todayStr();
+            return data.records.filter(r => r.date === day);
+        }
+
+        function getRecordsByDate(dateStr) {
+            return data.records.filter(r => r.date === dateStr);
+        }
+
+        /** 结算一条记录 (如果已结束则忽略) */
+        function closeRecord(record, endTime) {
+            if (record.end !== null) return;
+            const start = parseISODate(record.start);
+            const end = endTime || new Date();
+            record.end = end.toISOString();
+            const diffMs = end.getTime() - start.getTime();
+            record.duration = Math.max(0, Math.round(diffMs / 60000));
+        }
+
+        /** 创建新记录 */
+        function createRecord(type, startTime) {
+            const now = startTime || new Date();
+            const record = {
+                id: generateId(),
+                type: type,
+                start: now.toISOString(),
+                end: null,
+                date: formatDate(now),
+                duration: null,
+            };
+            data.records.push(record);
+            saveData();
+            return record;
+        }
+
+        /** 获取今日已结算的工时 (分钟) */
+        function getTodaySettled(type) {
+            const today = getTodayRecords();
+            return today
+                .filter(r => r.type === type && r.duration !== null)
+                .reduce((sum, r) => sum + (r.duration || 0), 0);
+        }
+
+        /** 获取今日进行中的记录 (未结算) */
+        function getTodayOpen(type) {
+            return getTodayRecords().find(r => r.type === type && r.end === null);
+        }
+
+        /** 获取今日总在岗分钟 (已结算工作 + 已结算加班 + 进行中工作到现在的分钟 + 进行中加班到现在的分钟) */
+        function getTodayTotalMinutes() {
+            const now = new Date();
+            const today = getTodayRecords();
+            let total = 0;
+
+            // 已结算的
+            const settled = today.filter(r => r.duration !== null);
+            settled.forEach(r => total += r.duration || 0);
+
+            // 进行中的
+            const open = today.filter(r => r.end === null);
+            open.forEach(r => {
+                const start = parseISODate(r.start);
+                const diff = Math.max(0, now.getTime() - start.getTime());
+                total += Math.round(diff / 60000);
+            });
+
+            return total;
+        }
+
+        // ================================================================
+        //  UI 渲染
+        // ================================================================
+
+        const $ = (id) => document.getElementById(id);
+
+        const clockInBtn = $('clockInBtn');
+        const clockOutBtn = $('clockOutBtn');
+        const otStartBtn = $('otStartBtn');
+        const otEndBtn = $('otEndBtn');
+        const clockInTime = $('clockInTime');
+        const clockOutTime = $('clockOutTime');
+        const otStartTime = $('otStartTime');
+        const otEndTime = $('otEndTime');
+        const todayWorkHours = $('todayWorkHours');
+        const todayOtHours = $('todayOtHours');
+        const todayTotalHours = $('todayTotalHours');
+        const recordList = $('recordList');
+        const recordCount = $('recordCount');
+        const todayBadge = $('todayBadge');
+        const toastContainer = $('toastContainer');
+
+        let currentFilter = 'all';
+
+        function renderAll() {
+            renderClockButtons();
+            renderStats();
+            renderRecords(currentFilter);
+            renderBadge();
+        }
+
+        function renderClockButtons() {
+            const now = new Date();
+            const today = todayStr();
+
+            // 检查今日是否有进行中的工作
+            const openWork = getTodayOpen('work');
+            const openOt = getTodayOpen('overtime');
+
+            // 上班按钮
+            if (openWork) {
+                clockInBtn.classList.add('primary');
+                clockInBtn.disabled = true;
+                clockInTime.textContent = formatTime(parseISODate(openWork.start));
+            } else {
+                clockInBtn.classList.remove('primary');
+                clockInBtn.disabled = false;
+                clockInTime.textContent = '--:--';
+            }
+
+            // 下班按钮
+            if (openWork) {
+                clockOutBtn.disabled = false;
+                clockOutBtn.classList.add('primary');
+                clockOutTime.textContent = '⏳ 进行中';
+            } else {
+                clockOutBtn.disabled = true;
+                clockOutBtn.classList.remove('primary');
+                clockOutTime.textContent = '--:--';
+            }
+
+            // 加班开始
+            if (openOt) {
+                otStartBtn.classList.add('accent');
+                otStartBtn.disabled = true;
+                otStartTime.textContent = formatTime(parseISODate(openOt.start));
+            } else {
+                otStartBtn.classList.remove('accent');
+                otStartBtn.disabled = false;
+                otStartTime.textContent = '--:--';
+            }
+
+            // 加班结束
+            if (openOt) {
+                otEndBtn.disabled = false;
+                otEndBtn.classList.add('accent');
+                otEndTime.textContent = '⏳ 进行中';
+            } else {
+                otEndBtn.disabled = true;
+                otEndBtn.classList.remove('accent');
+                otEndTime.textContent = '--:--';
+            }
+
+            // 今日是否已有下班记录 (用来限制一天只能上班一次)
+            const todayWorkRecords = getTodayRecords().filter(r => r.type === 'work');
+            const hasWorkedToday = todayWorkRecords.some(r => r.duration !== null);
+            // 如果今天已经下过班，且没有进行中的工作，禁止再次上班
+            if (hasWorkedToday && !openWork) {
+                clockInBtn.disabled = true;
+                clockInBtn.classList.remove('primary');
+                clockInBtn.title = '今日已下班';
+            } else {
+                clockInBtn.title = '';
+            }
+
+            // 如果今天已经有过加班结算，且没有进行中的加班，禁止再次加班开始 (一天只能加一次班)
+            const todayOtSettled = getTodayRecords().filter(r => r.type === 'overtime' && r.duration !== null);
+            if (todayOtSettled.length > 0 && !openOt) {
+                otStartBtn.disabled = true;
+                otStartBtn.classList.remove('accent');
+                otStartBtn.title = '今日加班已结算';
+            } else {
+                otStartBtn.title = '';
+            }
+        }
+
+        function renderStats() {
+            const todayWork = getTodaySettled('work');
+            const todayOt = getTodaySettled('overtime');
+            const total = getTodayTotalMinutes();
+
+            // 加上进行中的工作/加班 (已在getTodayTotalMinutes中计算)
+            todayWorkHours.textContent = minutesToHours(todayWork).toFixed(1);
+            todayOtHours.textContent = minutesToHours(todayOt).toFixed(1);
+            todayTotalHours.textContent = minutesToHours(total).toFixed(1);
+        }
+
+        function renderRecords(filter) {
+            const records = data.records.slice().sort((a, b) => {
+                // 按日期倒序，同日期按开始时间倒序
+                if (a.date !== b.date) return b.date.localeCompare(a.date);
+                return b.start.localeCompare(a.start);
+            });
+
+            let filtered = records;
+            if (filter === 'work') {
+                filtered = records.filter(r => r.type === 'work');
+            } else if (filter === 'overtime') {
+                filtered = records.filter(r => r.type === 'overtime');
+            }
+
+            recordCount.textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                recordList.innerHTML = `
+                    <div class="empty-state">
+                        <span class="icon">📭</span>
+                        ${filter === 'all' ? '暂无记录，开始打卡吧' : '没有匹配的记录'}
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            for (const r of filtered) {
+                const startDate = parseISODate(r.start);
+                const endDate = r.end ? parseISODate(r.end) : null;
+                const isOpen = r.end === null;
+                const durationMin = r.duration !== null ? r.duration : (isOpen ? Math.round((new Date().getTime() - startDate
+                    .getTime()) / 60000) : null);
+                const durStr = isOpen ? `⏳ ${formatDuration(durationMin || 0)}` : formatDuration(durationMin || 0);
+
+                const typeLabel = r.type === 'work' ? '上班' : '加班';
+                const tagClass = r.type === 'work' ? 'work' : 'overtime';
+
+                const dateDisplay = r.date;
+                const timeRange = endDate ?
+                    `${formatTime(startDate)} → ${formatTime(endDate)}` :
+                    `${formatTime(startDate)} → 进行中`;
+
+                html += `
+                    <div class="record-item">
+                        <div class="left">
+                            <span class="date">${dateDisplay}</span>
+                            <span class="desc">
+                                <span class="tag ${tagClass}">${typeLabel}</span>
+                                ${timeRange}
+                            </span>
+                        </div>
+                        <div class="right">
+                            <span class="duration">${durStr}</span>
+                            <span class="type">${isOpen ? '⏳ 未结算' : '✅ 已结算'}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            recordList.innerHTML = html;
+        }
+
+        function renderBadge() {
+            const today = todayStr();
+            const count = getTodayRecords().length;
+            todayBadge.textContent = `${today}  ${count}条`;
+        }
+
+        // ================================================================
+        //  操作函数
+        // ================================================================
+
+        function showToast(msg, type = 'info') {
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.textContent = msg;
+            toastContainer.appendChild(el);
+            setTimeout(() => {
+                if (el.parentNode) el.remove();
+            }, 3000);
+        }
+
+        function clockIn() {
+            const now = new Date();
+            const today = todayStr();
+
+            // 检查是否已有进行中的工作
+            if (getTodayOpen('work')) {
+                showToast('今日已有进行中的上班打卡', 'error');
+                return;
+            }
+
+            // 检查今日是否已经下过班 (已结算)
+            const hasSettled = getTodayRecords().some(r => r.type === 'work' && r.duration !== null);
+            if (hasSettled) {
+                showToast('今日已下班，不能重复上班', 'error');
+                return;
+            }
+
+            createRecord('work', now);
+            showToast(`✅ 上班打卡成功 ${formatTime(now)}`, 'success');
+            renderAll();
+        }
+
+        function clockOut() {
+            const open = getTodayOpen('work');
+            if (!open) {
+                showToast('没有进行中的上班记录', 'error');
+                return;
+            }
+
+            const now = new Date();
+            closeRecord(open, now);
+            saveData();
+            showToast(`🔚 下班打卡成功 ${formatTime(now)} 时长 ${formatDuration(open.duration)}`, 'success');
+            renderAll();
+        }
+
+        function otStart() {
+            const now = new Date();
+            const today = todayStr();
+
+            if (getTodayOpen('overtime')) {
+                showToast('今日已有进行中的加班', 'error');
+                return;
+            }
+
+            // 检查今日是否已有加班结算
+            const hasSettled = getTodayRecords().some(r => r.type === 'overtime' && r.duration !== null);
+            if (hasSettled) {
+                showToast('今日加班已结算，不能重复开始', 'error');
+                return;
+            }
+
+            createRecord('overtime', now);
+            showToast(`🌙 加班开始 ${formatTime(now)}`, 'success');
+            renderAll();
+        }
+
+        function otEnd() {
+            const open = getTodayOpen('overtime');
+            if (!open) {
+                showToast('没有进行中的加班记录', 'error');
+                return;
+            }
+
+            const now = new Date();
+            closeRecord(open, now);
+            saveData();
+            showToast(`☀️ 加班结束 ${formatTime(now)} 时长 ${formatDuration(open.duration)}`, 'success');
+            renderAll();
+        }
+
+        // ================================================================
+        //  导出 / 清空
+        // ================================================================
+
+        function exportData() {
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `工时记录_${todayStr()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📤 数据已导出 (JSON)', 'info');
+        }
+
+        function exportCsv() {
+            if (data.records.length === 0) {
+                showToast('没有记录可导出', 'error');
+                return;
+            }
+            // 按日期排序
+            const sorted = [...data.records].sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start));
+            let csv = '日期,类型,开始时间,结束时间,时长(分钟),状态\n';
+            for (const r of sorted) {
+                const start = formatTime(parseISODate(r.start));
+                const end = r.end ? formatTime(parseISODate(r.end)) : '进行中';
+                const dur = r.duration !== null ? r.duration : '未结算';
+                const status = r.end === null ? '进行中' : '已结算';
+                const type = r.type === 'work' ? '上班' : '加班';
+                csv += `${r.date},${type},${start},${end},${dur},${status}\n`;
+            }
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `工时记录_${todayStr()}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📥 CSV 已导出', 'info');
+        }
+
+        function clearAll() {
+            if (data.records.length === 0) {
+                showToast('没有数据可清空', 'info');
+                return;
+            }
+            if (!confirm('⚠️ 确定要清空所有记录吗？此操作不可撤销！')) return;
+            data.records = [];
+            saveData();
+            renderAll();
+            showToast('🗑️ 已清空所有记录', 'info');
+        }
+
+        // ================================================================
+        //  事件绑定
+        // ================================================================
+
+        clockInBtn.addEventListener('click', clockIn);
+        clockOutBtn.addEventListener('click', clockOut);
+        otStartBtn.addEventListener('click', otStart);
+        otEndBtn.addEventListener('click', otEnd);
+
+        document.querySelectorAll('[data-filter]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderRecords(currentFilter);
+            });
+        });
+
+        $('exportBtn').addEventListener('click', exportData);
+        $('exportCsvBtn').addEventListener('click', exportCsv);
+        $('clearBtn').addEventListener('click', clearAll);
+
+        // 自动刷新 (每分钟更新统计和进行中的记录)
+        let refreshInterval = setInterval(() => {
+            renderStats();
+            renderRecords(currentFilter);
+            renderClockButtons();
+        }, 60000);
+
+        // 页面可见性变化时刷新
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                renderAll();
+            }
+        });
+
+        // 初始化
+        renderAll();
+
+        // 如果页面关闭前保存
+        window.addEventListener('beforeunload', () => {
+            saveData();
+        });
+
+        // ================================================================
+        //  额外: 双击标题重置 (调试用)
+        // ================================================================
+
+        document.querySelector('.header h1').addEventListener('dblclick', () => {
+            if (confirm('重置所有数据？')) {
+                data.records = [];
+                saveData();
+                renderAll();
+                showToast('已重置', 'info');
+            }
+        });
+
+        console.log('📋 工时簿已启动 v1.0');
+        console.log('当前记录数:', data.records.length);
+    </script>
+
+</body>
+</html>
